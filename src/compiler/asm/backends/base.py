@@ -6,6 +6,9 @@ from ...ir.code import IRBlock, IRValue
 class ASMBackend:
     code: ASMCode = field(default_factory=ASMCode)
 
+    def add_entry_point(self):
+        ...
+
     def add_label_start(self, block: IRBlock):
         ...
     

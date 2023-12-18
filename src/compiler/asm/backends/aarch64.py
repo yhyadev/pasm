@@ -5,6 +5,14 @@ from ...ir.code import *
 
 @dataclass()
 class Aarch64Backend(ASMBackend):
+    def add_entry_point(self):
+        self.code.lines += "\t.global _start\n"
+        self.code.lines += "_start:\n"
+        self.code.lines += "\tbl main\n"
+        self.code.lines += "\tmov w8, #93\n"
+        self.code.lines += "\tmov w0, wzr\n"
+        self.code.lines += "\tsvc #0\n"
+    
     def add_label_start(self, block: IRBlock):
         self.code.lines += f"\t.global {block.name}\n"
         self.code.lines += f"{block.name}:\n"

@@ -1,6 +1,5 @@
-from dataclasses import dataclass
-from pprint import PrettyPrinter
 import sys
+from dataclasses import dataclass
 from .backends.base import ASMBackend, ASMInstruction
 from .code import *
 from ..ir.code import *
@@ -11,6 +10,12 @@ class ASMGen():
     ircode: IRCode
 
     def generate(self):
+        if self.ircode.get_block("main") == None:
+            print("expected a main function", file=sys.stderr)
+            exit(1)
+
+        self.backend.add_entry_point()
+
         for block in self.ircode.blocks:
             self.backend.add_label_start(block)
 
