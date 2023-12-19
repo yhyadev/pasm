@@ -43,6 +43,7 @@ class IRBlock:
     name: str
     signature: IRBlockSignature
     instructions: list[IRInstruction] = field(default_factory=list)
+    returned: bool = False
 
 @dataclass()
 class IRBlockReference(IRValue):
@@ -67,7 +68,6 @@ class IRReturn(IRInstruction):
 @dataclass()
 class IRCode:
     blocks: list[IRBlock] = field(default_factory=list)
-
     string_literals: list[IRStringLiteral] = field(default_factory=list)
 
     def get_block(self, name: str) -> int | None:

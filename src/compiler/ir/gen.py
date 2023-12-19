@@ -8,7 +8,6 @@ from ..ast import *
 class IRGen:
     code: IRCode = field(default_factory=IRCode)
     current_block: IRBlock | None = None
-    returned: bool = False
 
     def generate(self, program: Program) -> IRCode:
         for stmt in program.body:
@@ -42,13 +41,12 @@ class IRGen:
                 for stmt in funcdef.body:
                     self.generate_stmt(stmt)
 
-                if not self.returned and self.current_block.signature.return_type != Type.Void:
+                if not self.current_block.returned and self.current_block.signature.return_type != Type.Void:
                     print("expected to return but did not", file=sys.stderr)
                     exit(1)
 
                 self.code.blocks.append(self.current_block)
                 self.current_block = None
-                self.returned = False
             case returnstmt if isinstance(returnstmt, ReturnStatement):
                 if self.current_block == None:
                     print("cannot use return outside a function", file=sys.stderr)
@@ -65,7 +63,7 @@ class IRGen:
                     exit(1)
 
                 self.current_block.instructions.append(IRReturn(value))
-                self.returned = True
+                self.current_block.returned = True
             
             case expr if isinstance(expr, Expression):
                 value = self.generate_expr(expr)

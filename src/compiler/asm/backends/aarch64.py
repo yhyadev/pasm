@@ -18,7 +18,7 @@ class Aarch64Backend(ASMBackend):
         self.code.lines += f"{block.name}:\n"
     
     def add_label_end(self, block: IRBlock):
-        if len(block.instructions) == 0 or not isinstance(block.instructions[-1], IRReturn):
+        if not block.returned and block.signature.return_type == Type.Void:
             self.add_instruction(ASMReturn())
     
     def add_instruction(self, instruction: ASMInstruction):
