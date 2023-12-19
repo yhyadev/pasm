@@ -23,6 +23,15 @@ class Aarch64Backend(ASMBackend):
     
     def add_instruction(self, instruction: ASMInstruction):
         self.code.lines += f"\t{instruction.to_aarch64()}\n"
+    
+    def repr_register(self, number: int) -> str:
+        return f"x{number}"
+    
+    def repr_integer(self, value: int) -> str:
+        return f"#{value}"
+    
+    def repr_float(self, value: float) -> str:
+        return f"#{value}"
 
     def display_code(self) -> str:
         return "".join(self.code.lines)

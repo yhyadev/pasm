@@ -58,10 +58,12 @@ class ASMGen():
     def generate_value(self, value: IRValue) -> str:
         match value:
             case integer if isinstance(integer, IRInteger):
-                return f"#{integer.value}"
+                return self.backend.repr_integer(integer.value)
+            case floatv if isinstance(floatv, IRFloat):
+                return self.backend.repr_float(floatv.value)
             case call if isinstance(call, IRCall):
                 self.backend.add_instruction(self.generate_asm_instruction(call))
-                return "x0"
+                return self.backend.repr_register(0)
             case _:
                 print("value is not handled yet", file=sys.stderr)
                 exit(1)

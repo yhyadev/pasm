@@ -19,19 +19,19 @@ class ASMReturn(ASMInstruction):
 
 @dataclass()
 class ASMMove(ASMInstruction):
-    register: int
+    register_number: int
     value: str
 
     def to_aarch64(self) -> str:
-        return f"mov x{self.register}, {self.value}"
+        return f"mov x{self.register_number}, {self.value}"
 
 @dataclass()
 class ASMLoadAddress(ASMInstruction):
-    register: int
+    register_number: int
     address: str
 
     def to_aarch64(self) -> str:
-        return f"adr x{self.register}, {self.address}"
+        return f"adr x{self.register_number}, {self.address}"
     
 
 @dataclass()
