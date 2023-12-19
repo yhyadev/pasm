@@ -23,7 +23,14 @@ class ASMMove(ASMInstruction):
     value: str
 
     def to_aarch64(self) -> str:
-        return f"mov x{self.register_number}, {self.value}"
+        if "." in self.value:
+            instruction = "fmov"
+            register_type = "d"
+        else:
+            instruction = "mov"
+            register_type = "x"
+
+        return f"{instruction} {register_type}{self.register_number}, {self.value}"
 
 @dataclass()
 class ASMLoadAddress(ASMInstruction):
