@@ -48,6 +48,6 @@ class ASMLoadAddress(ASMInstruction):
 
 @dataclass()
 class ASMCode:
-    lines: list[str] = field(default_factory=list)
+    text_segment: list[str] = field(default_factory=list)
     data_segement: list[str] = field(default_factory=list)
-    string_literals: list[str] = field(default_factory=list)
+    string_literals: list[list[str]] = field(default_factory=list)

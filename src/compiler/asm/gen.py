@@ -25,6 +25,12 @@ class ASMGen:
                 self.backend.add_instruction(self.generate_asm_instruction(instruction))
 
             self.backend.add_label_end(block)
+        
+        for string_literal in self.ircode.string_literals:
+            self.backend.add_string_literal(string_literal.value)
+
+        self.backend.initialize_data_segment()
+
 
     def generate_asm_instruction(self, instruction: IRInstruction) -> ASMInstruction:
         match instruction:
@@ -71,6 +77,9 @@ class ASMGen:
                 return self.backend.repr_integer(integer.value)
             case floatv if isinstance(floatv, IRFloat):
                 return self.backend.repr_float(floatv.value)
+            case stringref if isinstance(stringref, IRStringReference):
+                self.backend.add_instruction(ASMLoadAddress(0, f"str{stringref.index}"))
+                return self.backend.repr_register(0)
             case call if isinstance(call, IRCall):
                 self.backend.add_instruction(self.generate_asm_instruction(call))
                 return self.backend.repr_register(0)

@@ -50,13 +50,12 @@ match platform.machine():
         asmgen = compiler.asm.gen.ASMGen(asmbackend, ircode)
         asmgen.generate()
 
-        with open(args.file_path.stem + ".s", "w") as f:
-            f.write(asmbackend.display_code())
-
         if args.emit_outputs:
             print("Assembly :")
             print(asmbackend.display_code())
-            print()
+
+        with open(args.file_path.stem + ".s", "w") as f:
+            f.write(asmbackend.display_code())
     case m:
         print(m, "is not a supported machine yet")
         exit(1)
