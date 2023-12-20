@@ -1,18 +1,20 @@
-import sys
 from dataclasses import dataclass
 from .backends.base import ASMBackend, ASMInstruction
 from .code import *
+from ..errors import ErrorKind
 from ..ir.code import *
 
+
 @dataclass()
-class ASMGen():
+class ASMGen:
     backend: ASMBackend
     ircode: IRCode
 
     def generate(self):
         if self.ircode.get_block("main") == None:
-            print("expected a main function", file=sys.stderr)
-            exit(1)
+            self.ircode.diagnoster.error_panic(
+                ErrorKind.Invalid, "program: main function is undefined"
+            )
 
         self.backend.add_entry_point()
 
@@ -30,30 +32,38 @@ class ASMGen():
                 match call.callable:
                     case br if isinstance(br, IRBlockReference):
                         block = self.ircode.blocks[br.index]
-                        
+
                         if len(call.arguments) != len(block.signature.parameters_types):
-                            print(f"expected {len(block.signature.parameters_types)} arguments got {len(call.arguments)}", file=sys.stderr)
-                            exit(1)
+                            call.get_diagnoster().error_panic(
+                                ErrorKind.Invalid,
+                                f"call: expected {len(block.signature.parameters_types)} {'arguments' if len(block.signature.parameters_types) != 1 else 'argument'} got {len(call.arguments)}",
+                            )
 
-                        for (i, parameter_type) in enumerate(block.signature.parameters_types):
+                        for i, parameter_type in enumerate(
+                            block.signature.parameters_types
+                        ):
                             if call.arguments[i].get_type() != parameter_type:
-                                print("mismatched types in call", file=sys.stderr)
-                                exit(1)
+                                call.get_diagnoster().error_panic(
+                                    ErrorKind.Types,
+                                    f"mismatched: expected argument at position {i} to be of type {parameter_type} but got argument of type {call.arguments[i].get_type()}",
+                                )
 
-                        for (i, argument) in enumerate(call.arguments):
-                            self.backend.add_instruction(ASMMove(i, self.generate_value(argument)))
+                        for i, argument in enumerate(call.arguments):
+                            self.backend.add_instruction(
+                                ASMMove(i, self.generate_value(argument))
+                            )
 
                         return ASMCall(block.name)
                     case _:
-                        print("callable is not handled", file=sys.stderr)
-                        exit(1)
+                        call.get_diagnoster().error_panic(ErrorKind.Invalid, "callable")
             case ret if isinstance(ret, IRReturn):
                 self.backend.add_instruction(ASMMove(0, self.generate_value(ret.value)))
-                
+
                 return ASMReturn()
             case _:
-                print("instruction is unimplemented yet", file=sys.stderr)
-                exit(1)
+                instruction.get_diagnoster().error_panic(
+                    ErrorKind.Invalid, "instruction"
+                )
 
     def generate_value(self, value: IRValue) -> str:
         match value:
@@ -65,5 +75,4 @@ class ASMGen():
                 self.backend.add_instruction(self.generate_asm_instruction(call))
                 return self.backend.repr_register(0)
             case _:
-                print("value is not handled yet", file=sys.stderr)
-                exit(1)
+                value.get_diagnoster().error_panic(ErrorKind.Invalid, "value")

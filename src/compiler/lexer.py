@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 import enum
-import sys
 from typing import Any
+from copy import deepcopy
+from .errors import Diagnoster, ErrorKind
 
 
 class TokenKind(enum.Enum):
@@ -30,6 +31,7 @@ class TokenKind(enum.Enum):
 
 @dataclass()
 class Token:
+    diagnoster: Diagnoster
     kind: TokenKind
     value: Any = ""
 
@@ -37,6 +39,7 @@ class Token:
 @dataclass()
 class Lexer:
     chars: list[str]
+    diagnoster: Diagnoster
 
     def tokenize(self) -> list[Token]:
         tokens = []
@@ -44,29 +47,35 @@ class Lexer:
         while len(self.chars) != 0:
             match self.chars.pop(0):
                 case "(":
-                    tokens.append(Token(TokenKind.OpenParen))
+                    tokens.append(Token(deepcopy(self.diagnoster), TokenKind.OpenParen))
                 case ")":
-                    tokens.append(Token(TokenKind.CloseParen))
+                    tokens.append(
+                        Token(deepcopy(self.diagnoster), TokenKind.CloseParen)
+                    )
                 case "{":
-                    tokens.append(Token(TokenKind.OpenBrace))
+                    tokens.append(Token(deepcopy(self.diagnoster), TokenKind.OpenBrace))
                 case "}":
-                    tokens.append(Token(TokenKind.CloseBrace))
+                    tokens.append(
+                        Token(deepcopy(self.diagnoster), TokenKind.CloseBrace)
+                    )
                 case ":":
-                    tokens.append(Token(TokenKind.Colon))
+                    tokens.append(Token(deepcopy(self.diagnoster), TokenKind.Colon))
                 case ".":
-                    tokens.append(Token(TokenKind.Period))
+                    tokens.append(Token(deepcopy(self.diagnoster), TokenKind.Period))
                 case ",":
-                    tokens.append(Token(TokenKind.Comma))
+                    tokens.append(Token(deepcopy(self.diagnoster), TokenKind.Comma))
                 case "+":
-                    tokens.append(Token(TokenKind.Plus))
+                    tokens.append(Token(deepcopy(self.diagnoster), TokenKind.Plus))
                 case "-":
-                    tokens.append(Token(TokenKind.Minus))
+                    tokens.append(Token(deepcopy(self.diagnoster), TokenKind.Minus))
                 case "*":
-                    tokens.append(Token(TokenKind.Star))
+                    tokens.append(Token(deepcopy(self.diagnoster), TokenKind.Star))
                 case "/":
-                    tokens.append(Token(TokenKind.ForwardSlash))
+                    tokens.append(
+                        Token(deepcopy(self.diagnoster), TokenKind.ForwardSlash)
+                    )
                 case "%":
-                    tokens.append(Token(TokenKind.Percent))
+                    tokens.append(Token(deepcopy(self.diagnoster), TokenKind.Percent))
                 case '"':
                     tokens.append(self.read_string())
                 case c if c.isdigit():
@@ -74,12 +83,16 @@ class Lexer:
                 case c if c.isalpha() or c == "_":
                     tokens.append(self.read_ident(c))
                 case c if c.isspace():
+                    if c == "\n":
+                        self.diagnoster.position.line += 1
+                        self.diagnoster.position.column = 1
                     continue
                 case c:
-                    print(f"invalid token '{c}'", file=sys.stderr)
-                    exit(1)
+                    self.diagnoster.error_panic(ErrorKind.Invalid, f"token '{c}'")
 
-        tokens.append(Token(TokenKind.EOF))
+            self.diagnoster.position.column += 1
+
+        tokens.append(Token(deepcopy(self.diagnoster), TokenKind.EOF))
 
         return tokens
 
@@ -94,7 +107,7 @@ class Lexer:
 
             literal += c
 
-        return Token(TokenKind.String, literal)
+        return Token(deepcopy(self.diagnoster), TokenKind.String, literal)
 
     def read_number(self, first_char: str) -> Token:
         literal = first_char
@@ -108,9 +121,9 @@ class Lexer:
                 break
 
         if "." in literal:
-            return Token(TokenKind.Float, float(literal))
+            return Token(deepcopy(self.diagnoster), TokenKind.Float, float(literal))
         else:
-            return Token(TokenKind.Integer, int(literal))
+            return Token(deepcopy(self.diagnoster), TokenKind.Integer, int(literal))
 
     def read_ident(self, first_char: str) -> Token:
         literal = first_char
@@ -123,4 +136,4 @@ class Lexer:
             else:
                 break
 
-        return Token(TokenKind.Identifier, literal)
+        return Token(deepcopy(self.diagnoster), TokenKind.Identifier, literal)

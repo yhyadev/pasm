@@ -1,7 +1,8 @@
 import enum
 from dataclasses import dataclass
 from .ast import *
-from .lexer import Token, TokenKind, sys
+from .lexer import Token, TokenKind
+from .errors import ErrorKind
 
 
 class Precedence(enum.Enum):
@@ -32,7 +33,7 @@ class Parser:
     tokens: list[Token]
 
     def parse(self) -> Program:
-        program = Program([])
+        program = Program([], self.tokens[-1].diagnoster)
 
         while len(self.tokens) > 1 and self.tokens[0] != TokenKind.EOF:
             program.body.append(self.parse_stmt())
@@ -52,10 +53,13 @@ class Parser:
         self.tokens.pop(0)
 
         if self.tokens[0].kind != TokenKind.Identifier:
-            print("expected function name to be identifier", file=sys.stderr)
-            exit(1)
+            self.tokens[0].diagnoster.error_panic(
+                ErrorKind.Invalid,
+                "syntax: expected the function name to be an identifier",
+            )
 
-        name = Identifier(self.tokens.pop(0).value)
+        name = Identifier(self.tokens[0].value, self.tokens[0].diagnoster)
+        self.tokens.pop(0)
 
         parameters = self.parse_function_parameters()
 
@@ -69,8 +73,10 @@ class Parser:
         parameters = []
 
         if self.tokens[0].kind != TokenKind.OpenParen:
-            print("expected function parameters to start with open paren token", file=sys.stderr)
-            exit(1)
+            self.tokens[0].diagnoster.error_panic(
+                ErrorKind.Invalid,
+                "syntax: expected the function parameters to start with '('",
+            )
         else:
             self.tokens.pop(0)
 
@@ -84,8 +90,10 @@ class Parser:
                     parameters.append(self.parse_function_parameter())
 
         if self.tokens[0].kind != TokenKind.CloseParen:
-            print("expected function parameters to start with open paren token", file=sys.stderr)
-            exit(1)
+            self.tokens[0].diagnoster.error_panic(
+                ErrorKind.Invalid,
+                "syntax: expected the function parameters to end with ')'",
+            )
         else:
             self.tokens.pop(0)
 
@@ -93,21 +101,26 @@ class Parser:
 
     def parse_function_parameter(self) -> FunctionParameter:
         if self.tokens[0].kind != TokenKind.Identifier:
-            print("expected an identifier for function parameter name", file=sys.stderr)
-            exit(1)
+            self.tokens[0].diagnoster.error_panic(
+                ErrorKind.Invalid,
+                "syntax: expected the function name to be an identifier",
+            )
 
-        name = Identifier(self.tokens.pop(0).value)
+        name = Identifier(self.tokens[0].value, self.tokens[0].diagnoster)
+        self.tokens.pop(0)
 
         expected_type = self.parse_type()
 
-        return FunctionParameter(name, expected_type)
+        return FunctionParameter(name, expected_type, self.tokens[0].diagnoster)
 
     def parse_function_body(self) -> list[Statement]:
         body = []
 
         if self.tokens[0].kind != TokenKind.OpenBrace:
-            print("expected the start of function body to be open brace", file=sys.stderr)
-            exit(1)
+            self.tokens[0].diagnoster.error_panic(
+                ErrorKind.Invalid,
+                "syntax: expected the function body to start with '{'",
+            )
         else:
             self.tokens.pop(0)
 
@@ -123,7 +136,6 @@ class Parser:
         value = self.parse_expr()
 
         return ReturnStatement(value)
-        
 
     def parse_type(self) -> Type:
         tok = self.tokens.pop(0)
@@ -140,11 +152,9 @@ class Parser:
                     case "string":
                         return Type.String
                     case _:
-                        print("custom types are not supported yet", file=sys.stderr)
-                        exit(1)
+                        tok.diagnoster.error_panic(ErrorKind.Unspported, "type")
             case _:
-                print("cannot use this token as a type", file=sys.stderr)
-                exit(1)
+                tok.diagnoster.error_panic(ErrorKind.Unspported, "type")
 
     def parse_expr(self, precedence: Precedence = Precedence.Lowest) -> Expression:
         lhs = self.parse_unary_expression()
@@ -160,16 +170,15 @@ class Parser:
     def parse_unary_expression(self) -> Expression:
         match self.tokens.pop(0):
             case tok if tok.kind == TokenKind.Identifier:
-                return Identifier(tok.value)
+                return Identifier(tok.value, tok.diagnoster)
             case tok if tok.kind == TokenKind.String:
-                return String(tok.value)
+                return String(tok.value, tok.diagnoster)
             case tok if tok.kind == TokenKind.Integer:
-                return Integer(tok.value)
+                return Integer(tok.value, tok.diagnoster)
             case tok if tok.kind == TokenKind.Float:
-                return Float(tok.value)
+                return Float(tok.value, tok.diagnoster)
             case tok:
-                print("invalid expression", file=sys.stderr)
-                exit(1)
+                tok.diagnoster.error_panic(ErrorKind.Unknown, "expression")
 
     def parse_binary_expression(self, lhs: Expression) -> Expression:
         tok = self.tokens.pop(0)
@@ -182,7 +191,9 @@ class Parser:
             case _:
                 return lhs
 
-    def parse_binary_operation(self, lhs: Expression, operator: Token) -> BinaryOperation:
+    def parse_binary_operation(
+        self, lhs: Expression, operator: Token
+    ) -> BinaryOperation:
         rhs = self.parse_expr(Precedence.from_token(operator))
 
         return BinaryOperation(lhs, operator, rhs)
@@ -205,11 +216,11 @@ class Parser:
                     arguments.append(self.parse_expr())
 
         if self.tokens[0].kind != TokenKind.CloseParen:
-            print("expected call arguments to start with open paren token", file=sys.stderr)
-            exit(1)
+            self.tokens[0].diagnoster.error_panic(
+                ErrorKind.Invalid,
+                "syntax: expected the call arguments to start with '('",
+            )
         else:
             self.tokens.pop(0)
 
-        
         return arguments
-

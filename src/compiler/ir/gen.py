@@ -1,16 +1,22 @@
-import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from ..errors import ErrorKind
 from .code import *
 from ..ast import *
 
 
 @dataclass
 class IRGen:
-    code: IRCode = field(default_factory=IRCode)
-    current_block: IRBlock | None = None
+    program: Program
+    code: IRCode
+    current_block: IRBlock | None
 
-    def generate(self, program: Program) -> IRCode:
-        for stmt in program.body:
+    def __init__(self, program: Program) -> None:
+        self.program = program
+        self.code = IRCode(program.diagnoster)
+        self.current_block = None
+
+    def generate(self) -> IRCode:
+        for stmt in self.program.body:
             self.generate_stmt(stmt)
 
         return self.code
@@ -19,16 +25,15 @@ class IRGen:
         match stmt:
             case funcdef if isinstance(funcdef, FunctionDefinition):
                 if self.code.get_block(funcdef.name.value) != None:
-                    print(
-                        "overloading is not implemented yet", file=sys.stderr
+                    funcdef.name.diagnoster.error_panic(
+                        ErrorKind.Invalid, "function: function name is already used"
                     )
-                    exit(1)
 
                 if self.current_block != None:
-                    print(
-                        "you can't make a function inside a function", file=sys.stderr
+                    funcdef.get_diagnoster().error_panic(
+                        ErrorKind.Invalid,
+                        "function: function cannot be defined inside another function",
                     )
-                    exit(1)
 
                 self.current_block = IRBlock(
                     funcdef.name.value,
@@ -41,30 +46,43 @@ class IRGen:
                 for stmt in funcdef.body:
                     self.generate_stmt(stmt)
 
-                if not self.current_block.returned and self.current_block.signature.return_type != Type.Void:
-                    print("expected to return but did not", file=sys.stderr)
-                    exit(1)
+                if (
+                    not self.current_block.returned
+                    and self.current_block.signature.return_type != Type.Void
+                ):
+                    funcdef.get_diagnoster().error_panic(
+                        ErrorKind.Invalid,
+                        f"function: expected to return an expression with a type of {str(self.current_block.signature.return_type)}",
+                    )
 
                 self.code.blocks.append(self.current_block)
                 self.current_block = None
             case returnstmt if isinstance(returnstmt, ReturnStatement):
                 if self.current_block == None:
-                    print("cannot use return outside a function", file=sys.stderr)
-                    exit(1)
+                    returnstmt.get_diagnoster().error_panic(
+                        ErrorKind.Invalid,
+                        "return statement: return statement must be in a function",
+                    )
 
                 value = self.generate_expr(returnstmt.value)
 
                 if self.current_block.signature.return_type == Type.Void:
-                    print("did not expect a return value", file=sys.stderr)
-                    exit(1)
+                    returnstmt.get_diagnoster().error_panic(
+                        ErrorKind.Invalid,
+                        "return statement: the function return type is void",
+                    )
 
                 if value.get_type() != self.current_block.signature.return_type:
-                    print("types mismatched, return value did not match expected return type", file=sys.stderr)
-                    exit(1)
+                    returnstmt.get_diagnoster().error_panic(
+                        ErrorKind.Types,
+                        f"mismatched: expected the return value to be of type {str(self.current_block.signature.return_type)} but got a value of type {str(value.get_type())}",
+                    )
 
-                self.current_block.instructions.append(IRReturn(value))
+                self.current_block.instructions.append(
+                    IRReturn(value, returnstmt.get_diagnoster())
+                )
                 self.current_block.returned = True
-            
+
             case expr if isinstance(expr, Expression):
                 value = self.generate_expr(expr)
 
@@ -76,33 +94,44 @@ class IRGen:
 
     def generate_expr(self, expr: Expression) -> IRValue:
         if self.current_block == None:
-            print("cannot use an expression outside a function", file=sys.stderr)
-            exit(1)
+            expr.get_diagnoster().error_panic(
+                ErrorKind.Invalid,
+                "expression: expected the expression to be inside a function",
+            )
 
         match expr:
             case integerexpr if isinstance(integerexpr, Integer):
-                return IRInteger(integerexpr.value)
+                return IRInteger(integerexpr.value, integerexpr.diagnoster)
             case floatexpr if isinstance(floatexpr, Float):
-                return IRFloat(floatexpr.value)
+                return IRFloat(floatexpr.value, floatexpr.diagnoster)
             case stringexpr if isinstance(stringexpr, String):
                 index = self.code.add_string_literal(IRStringLiteral(stringexpr.value))
-                return IRStringReference(index)
+                return IRStringReference(index, stringexpr.diagnoster)
             case callexpr if isinstance(callexpr, Call):
                 match callexpr.callable:
                     case ident if isinstance(ident, Identifier):
                         block_index = self.code.get_block(ident.value)
                         if block_index == None:
-                            print(ident.value, "is not a function", file=sys.stderr)
-                            exit(1)
+                            callexpr.get_diagnoster().error_panic(
+                                ErrorKind.Invalid,
+                                f"call: {ident.value} is not a function",
+                            )
 
-                        blockref = IRBlockReference(block_index, self.code.blocks[block_index].signature)
+                        block_reference = IRBlockReference(
+                            block_index,
+                            self.code.blocks[block_index].signature,
+                            ident.diagnoster,
+                        )
 
-                        arguments = [self.generate_expr(arg) for arg in callexpr.arguments]
+                        arguments = [
+                            self.generate_expr(arg) for arg in callexpr.arguments
+                        ]
 
-                        return IRCall(blockref, arguments)
+                        return IRCall(block_reference, arguments)
                     case _:
-                        print(callexpr.callable, "is not a function")
-                        exit(1)
+                        callexpr.get_diagnoster().error_panic(
+                            ErrorKind.Invalid,
+                            f"call: {callexpr.callable} is not a callable",
+                        )
             case _:
-                print("expression is not implemented yet")
-                exit(1)
+                expr.get_diagnoster().error_panic(ErrorKind.Unknown, "expression")

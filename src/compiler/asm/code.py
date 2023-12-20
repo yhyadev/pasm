@@ -1,9 +1,11 @@
 from dataclasses import dataclass, field
 from ..ir.code import *
 
+
 class ASMInstruction:
     def to_aarch64(self) -> str:
         ...
+
 
 @dataclass()
 class ASMCall(ASMInstruction):
@@ -12,10 +14,12 @@ class ASMCall(ASMInstruction):
     def to_aarch64(self) -> str:
         return f"bl {self.label_name}"
 
+
 @dataclass()
 class ASMReturn(ASMInstruction):
     def to_aarch64(self) -> str:
         return "ret"
+
 
 @dataclass()
 class ASMMove(ASMInstruction):
@@ -32,6 +36,7 @@ class ASMMove(ASMInstruction):
 
         return f"{instruction} {register_type}{self.register_number}, {self.value}"
 
+
 @dataclass()
 class ASMLoadAddress(ASMInstruction):
     register_number: int
@@ -39,7 +44,7 @@ class ASMLoadAddress(ASMInstruction):
 
     def to_aarch64(self) -> str:
         return f"adr x{self.register_number}, {self.address}"
-    
+
 
 @dataclass()
 class ASMCode:

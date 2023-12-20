@@ -1,6 +1,7 @@
 import platform
 import sys
 import cli
+from compiler.errors import Diagnoster
 import compiler.lexer
 import compiler.parser
 import compiler.ir.gen
@@ -8,6 +9,7 @@ import compiler.asm.gen
 import compiler.asm.backends.aarch64
 
 from pprint import PrettyPrinter
+
 pprinter = PrettyPrinter()
 
 args = cli.parse_args()
@@ -17,7 +19,7 @@ if not args.file_path.is_file() or not args.file_path.exists():
     exit(1)
 
 with open(args.file_path, "r") as f:
-    lexer = compiler.lexer.Lexer(list(f.read()))
+    lexer = compiler.lexer.Lexer(list(f.read()), Diagnoster(args.file_path))
 
 tokens = lexer.tokenize()
 
@@ -34,8 +36,8 @@ if args.emit_outputs:
     pprinter.pprint(program)
     print()
 
-irgen = compiler.ir.gen.IRGen()
-ircode = irgen.generate(program)
+irgen = compiler.ir.gen.IRGen(program)
+ircode = irgen.generate()
 
 if args.emit_outputs:
     print("IR :")
