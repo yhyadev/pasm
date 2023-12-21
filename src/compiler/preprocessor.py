@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import os
 from pathlib import Path
 from .lexer import *
 from .errors import Diagnoster, ErrorKind
@@ -22,17 +23,37 @@ class Preprocessor:
 
         return processed_tokens
 
+    def include_file_search(self, input_file: str) -> Path | None:
+        if os.path.isfile(input_file) and os.path.exists(input_file):
+            return Path(input_file)
+        else:
+            pasmlib_paths = [
+                Path(os.environ.get("PREFIX", "") + "/lib/pasm"),
+                Path("../pasm/lib"),
+                Path("./lib"),
+                Path("../lib"),
+            ]
+
+            for pasmlib_path in pasmlib_paths:
+                pasmlib_path = pasmlib_path.joinpath(input_file)
+
+                if pasmlib_path.exists() and pasmlib_path.is_file():
+                    return pasmlib_path
+
+        return None
+
     def include_file(self) -> list[Token]:
-        if self.tokens[0].kind != TokenKind.String:
+        if self.tokens[0].kind != TokenKind.String or len(self.tokens[0].value) == 0:
             self.tokens[0].diagnoster.error_panic(
-                ErrorKind.Invalid, "syntax: expected the file path to be a string"
+                ErrorKind.Invalid,
+                "syntax: expected the file path to be a non-empty string",
             )
 
-        file_path = Path(self.tokens[0].value)
+        file_path = self.include_file_search(self.tokens[0].value)
 
-        if not file_path.exists() or not file_path.is_file():
+        if file_path == None:
             self.tokens[0].diagnoster.error_panic(
-                ErrorKind.Invalid, f"include: {file_path} is not a file"
+                ErrorKind.Invalid, f"include: {self.tokens[0].value} is not a file"
             )
 
         self.tokens.pop(0)
