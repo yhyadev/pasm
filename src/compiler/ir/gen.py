@@ -15,11 +15,9 @@ class IRGen:
         self.code = IRCode(program.diagnoster)
         self.current_block = None
 
-    def generate(self) -> IRCode:
+    def generate(self):
         for stmt in self.program.body:
             self.generate_stmt(stmt)
-
-        return self.code
 
     def generate_stmt(self, stmt: Statement):
         match stmt:

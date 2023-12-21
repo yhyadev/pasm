@@ -36,26 +36,26 @@ if args.emit_outputs:
     pprinter.pprint(program)
     print()
 
-irgen = compiler.ir.gen.IRGen(program)
-ircode = irgen.generate()
+ir_gen = compiler.ir.gen.IRGen(program)
+ir_gen.generate()
 
 if args.emit_outputs:
     print("IR :")
-    pprinter.pprint(ircode)
+    pprinter.pprint(ir_gen.code)
     print()
 
 match platform.machine():
     case "aarch64":
-        asmbackend = compiler.asm.backends.aarch64.Aarch64Backend()
-        asmgen = compiler.asm.gen.ASMGen(asmbackend, ircode)
-        asmgen.generate()
+        asm_backend = compiler.asm.backends.aarch64.Aarch64Backend()
+        asm_gen = compiler.asm.gen.ASMGen(asm_backend, ir_gen.code)
+        asm_gen.generate()
 
         if args.emit_outputs:
             print("Assembly :")
-            print(asmbackend.display_code())
+            print(asm_backend.display_code())
 
         with open(args.file_path.stem + ".s", "w") as f:
-            f.write(asmbackend.display_code())
+            f.write(asm_backend.display_code())
     case m:
         print(m, "is not a supported machine yet")
         exit(1)

@@ -13,9 +13,9 @@ class Aarch64Backend(ASMBackend):
         self.code.text_segment += "\tmov w8, #93\n"
         self.code.text_segment += "\tmov w0, wzr\n"
         self.code.text_segment += "\tsvc #0\n"
-    
+
     def initialize_data_segment(self):
-        for (i, string_literal) in enumerate(self.code.string_literals):
+        for i, string_literal in enumerate(self.code.string_literals):
             self.code.data_segement += f"str{i}:\n"
             self.code.data_segement += f"\t.asciz \"{''.join(string_literal)}\"\n"
 
@@ -41,7 +41,7 @@ class Aarch64Backend(ASMBackend):
 
     def repr_float(self, value: float) -> str:
         return f"#{value}"
-    
+
     def display_code(self) -> str:
         result = ""
 

@@ -8,36 +8,35 @@ from ..ir.code import *
 @dataclass()
 class ASMGen:
     backend: ASMBackend
-    ircode: IRCode
+    ir_code: IRCode
 
     def generate(self):
-        if self.ircode.get_block("main") == None:
-            self.ircode.diagnoster.error_panic(
+        if self.ir_code.get_block("main") == None:
+            self.ir_code.diagnoster.error_panic(
                 ErrorKind.Invalid, "program: main function is undefined"
             )
 
         self.backend.add_entry_point()
 
-        for block in self.ircode.blocks:
+        for block in self.ir_code.blocks:
             self.backend.add_label_start(block)
 
             for instruction in block.instructions:
                 self.backend.add_instruction(self.generate_asm_instruction(instruction))
 
             self.backend.add_label_end(block)
-        
-        for string_literal in self.ircode.string_literals:
+
+        for string_literal in self.ir_code.string_literals:
             self.backend.add_string_literal(string_literal.value)
 
         self.backend.initialize_data_segment()
-
 
     def generate_asm_instruction(self, instruction: IRInstruction) -> ASMInstruction:
         match instruction:
             case call if isinstance(call, IRCall):
                 match call.callable:
                     case br if isinstance(br, IRBlockReference):
-                        block = self.ircode.blocks[br.index]
+                        block = self.ir_code.blocks[br.index]
 
                         if len(call.arguments) != len(block.signature.parameters_types):
                             call.get_diagnoster().error_panic(
