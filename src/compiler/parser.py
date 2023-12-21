@@ -20,7 +20,7 @@ class Precedence(enum.Enum):
         match tok.kind:
             case TokenKind.Plus | TokenKind.Minus:
                 return cls.Sum
-            case TokenKind.Star | TokenKind.ForwardSlash | TokenKind.Percent:
+            case TokenKind.Star | TokenKind.ForwardSlash:
                 return cls.Product
             case TokenKind.OpenParen:
                 return cls.Call
@@ -184,7 +184,7 @@ class Parser:
         tok = self.tokens.pop(0)
 
         match tok.kind:
-            case TokenKind.Plus | TokenKind.Minus | TokenKind.Star | TokenKind.ForwardSlash | TokenKind.Percent:
+            case TokenKind.Plus | TokenKind.Minus | TokenKind.Star | TokenKind.ForwardSlash:
                 return self.parse_binary_operation(lhs, tok)
             case TokenKind.OpenParen:
                 return self.parse_call(lhs)

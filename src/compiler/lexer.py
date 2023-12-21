@@ -24,7 +24,6 @@ class TokenKind(enum.Enum):
     Minus = enum.auto()
     Star = enum.auto()
     ForwardSlash = enum.auto()
-    Percent = enum.auto()
 
     EOF = enum.auto()
 
@@ -74,8 +73,6 @@ class Lexer:
                     tokens.append(
                         Token(deepcopy(self.diagnoster), TokenKind.ForwardSlash)
                     )
-                case "%":
-                    tokens.append(Token(deepcopy(self.diagnoster), TokenKind.Percent))
                 case '"':
                     tokens.append(self.read_string())
                 case c if c.isdigit():
