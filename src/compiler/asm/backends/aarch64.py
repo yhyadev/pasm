@@ -33,8 +33,8 @@ class Aarch64Backend(ASMBackend):
     def add_string_literal(self, value: str):
         self.code.string_literals.append(list(value))
 
-    def repr_register(self, number: int) -> str:
-        return f"x{number}"
+    def repr_register(self, number: int, isfloat: bool) -> str:
+        return f"d{number}" if isfloat else f"x{number}"
 
     def repr_integer(self, value: int) -> str:
         return f"#{value}"

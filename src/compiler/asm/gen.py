@@ -67,7 +67,7 @@ class ASMGen:
                 return ASMReturn()
             case _:
                 instruction.get_diagnoster().error_panic(
-                    ErrorKind.Invalid, "instruction"
+                    ErrorKind.Unspported, "instruction conversion from ir to asm"
                 )
 
     def generate_value(self, value: IRValue) -> str:
@@ -78,9 +78,50 @@ class ASMGen:
                 return self.backend.repr_float(floatv.value)
             case stringref if isinstance(stringref, IRStringReference):
                 self.backend.add_instruction(ASMLoadAddress(0, f"str{stringref.index}"))
-                return self.backend.repr_register(0)
+                return self.backend.repr_register(0, False)
+            case binop if isinstance(binop, IRBinaryOperation):
+                isfloat = binop.get_type() == Type.Float
+
+                lhs_value = self.generate_value(binop.lhs)
+                rhs_value = self.generate_value(binop.rhs)
+
+                out_reg = self.backend.repr_register(10, isfloat)
+
+                self.backend.add_instruction(ASMMove(8, lhs_value))
+                lhs_reg = self.backend.repr_register(8, isfloat)
+
+                self.backend.add_instruction(ASMMove(9, rhs_value))
+                rhs_reg = self.backend.repr_register(9, isfloat)
+
+                match binop:
+                    case binadd if isinstance(binadd, IRAdd):
+                        BinOpInstruction = ASMAdd
+                    case binsub if isinstance(binsub, IRSub):
+                        BinOpInstruction = ASMSub
+                    case binmul if isinstance(binmul, IRMul):
+                        BinOpInstruction = ASMMul
+                    case bindiv if isinstance(bindiv, IRDiv):
+                        BinOpInstruction = ASMDiv
+                    case _:
+                        binop.get_diagnoster().error_panic(
+                            ErrorKind.Unspported,
+                            "binary operation conversion from ir to asm",
+                        )
+
+                self.backend.add_instruction(
+                    BinOpInstruction(
+                        isfloat,
+                        out_reg,
+                        lhs_reg,
+                        rhs_reg,
+                    )
+                )
+
+                return out_reg
             case call if isinstance(call, IRCall):
                 self.backend.add_instruction(self.generate_asm_instruction(call))
-                return self.backend.repr_register(0)
+                return self.backend.repr_register(0, call.get_type() == Type.Float)
             case _:
-                value.get_diagnoster().error_panic(ErrorKind.Invalid, "value")
+                value.get_diagnoster().error_panic(
+                    ErrorKind.Unspported, "value conversiom from ir to asm"
+                )

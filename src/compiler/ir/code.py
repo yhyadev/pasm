@@ -35,6 +35,48 @@ class IRFloat(IRValue):
         return self.diagnoster
 
 
+class IRBinaryOperation(IRValue):
+    lhs: IRValue
+    rhs: IRValue
+    diagnoster: Diagnoster
+
+    def get_type(self) -> Type:
+        assert self.lhs.get_type() == self.rhs.get_type()
+
+        return self.lhs.get_type()
+
+    def get_diagnoster(self) -> Diagnoster:
+        return self.diagnoster
+
+
+@dataclass()
+class IRAdd(IRBinaryOperation):
+    lhs: IRValue
+    rhs: IRValue
+    diagnoster: Diagnoster
+
+
+@dataclass()
+class IRSub(IRBinaryOperation):
+    lhs: IRValue
+    rhs: IRValue
+    diagnoster: Diagnoster
+
+
+@dataclass()
+class IRMul(IRBinaryOperation):
+    lhs: IRValue
+    rhs: IRValue
+    diagnoster: Diagnoster
+
+
+@dataclass()
+class IRDiv(IRBinaryOperation):
+    lhs: IRValue
+    rhs: IRValue
+    diagnoster: Diagnoster
+
+
 @dataclass()
 class IRStringLiteral:
     value: str

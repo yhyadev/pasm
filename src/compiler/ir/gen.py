@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+
+from compiler.lexer import TokenKind
 from ..errors import ErrorKind
 from .code import *
 from ..ast import *
@@ -105,6 +107,43 @@ class IRGen:
             case stringexpr if isinstance(stringexpr, String):
                 index = self.code.add_string_literal(IRStringLiteral(stringexpr.value))
                 return IRStringReference(index, stringexpr.diagnoster)
+            case binaryop if isinstance(binaryop, BinaryOperation):
+                supported_types = [Type.Integer, Type.Float]
+
+                lhs = self.generate_expr(binaryop.lhs)
+                rhs = self.generate_expr(binaryop.rhs)
+
+                if lhs.get_type() not in supported_types:
+                    lhs.get_diagnoster().error_panic(
+                        ErrorKind.Invalid,
+                        f"binary operation: expected the left hand side to be of type {' or '.join([str(type) for type in supported_types])}",
+                    )
+
+                if rhs.get_type() not in supported_types:
+                    rhs.get_diagnoster().error_panic(
+                        ErrorKind.Invalid,
+                        f"binary operation: expected the right hand side to be of type {' or '.join([str(type) for type in supported_types])}",
+                    )
+
+                if lhs.get_type() != rhs.get_type():
+                    lhs.get_diagnoster().error_panic(
+                        ErrorKind.Invalid,
+                        "binary operation: expected the two hand sides to be of the same type",
+                    )
+
+                match binaryop.operator.kind:
+                    case TokenKind.Plus:
+                        return IRAdd(lhs, rhs, binaryop.get_diagnoster())
+                    case TokenKind.Minus:
+                        return IRSub(lhs, rhs, binaryop.get_diagnoster())
+                    case TokenKind.Star:
+                        return IRMul(lhs, rhs, binaryop.get_diagnoster())
+                    case TokenKind.ForwardSlash:
+                        return IRDiv(lhs, rhs, binaryop.get_diagnoster())
+                    case _:
+                        binaryop.operator.diagnoster.error_panic(
+                            ErrorKind.Invalid, "binary operator"
+                        )
             case callexpr if isinstance(callexpr, Call):
                 match callexpr.callable:
                     case ident if isinstance(ident, Identifier):
@@ -132,4 +171,6 @@ class IRGen:
                             f"call: {callexpr.callable} is not a callable",
                         )
             case _:
-                expr.get_diagnoster().error_panic(ErrorKind.Unknown, "expression")
+                expr.get_diagnoster().error_panic(
+                    ErrorKind.Unspported, "expression conversiom from ast to ir"
+                )

@@ -25,7 +25,7 @@ class ASMBackend:
     def add_string_literal(self, value: str):
         ...
 
-    def repr_register(self, number: int) -> str:
+    def repr_register(self, number: int, isfloat: bool) -> str:
         ...
 
     def repr_integer(self, value: int) -> str:

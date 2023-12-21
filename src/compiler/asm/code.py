@@ -46,6 +46,56 @@ class ASMLoadAddress(ASMInstruction):
         return f"adr x{self.register_number}, {self.address}"
 
 
+class ASMBinaryOeration(ASMInstruction):
+    instruction: str
+    isfloat: bool
+    out_reg: str
+    lhs_reg: str
+    rhs_reg: str
+
+    def to_aarch64(self) -> str:
+        if self.isfloat:
+            self.instruction = "f" + self.instruction
+
+        return f"{self.instruction} {self.out_reg}, {self.lhs_reg}, {self.rhs_reg}"
+
+
+@dataclass()
+class ASMAdd(ASMBinaryOeration):
+    isfloat: bool
+    out_reg: str
+    lhs_reg: str
+    rhs_reg: str
+    instruction: str = "add"
+
+
+@dataclass()
+class ASMSub(ASMBinaryOeration):
+    isfloat: bool
+    out_reg: str
+    lhs_reg: str
+    rhs_reg: str
+    instruction: str = "sub"
+
+
+@dataclass()
+class ASMMul(ASMBinaryOeration):
+    isfloat: bool
+    out_reg: str
+    lhs_reg: str
+    rhs_reg: str
+    instruction: str = "mul"
+
+
+@dataclass()
+class ASMDiv(ASMBinaryOeration):
+    isfloat: bool
+    out_reg: str
+    lhs_reg: str
+    rhs_reg: str
+    instruction: str = "div"
+
+
 @dataclass()
 class ASMCode:
     text_segment: list[str] = field(default_factory=list)
