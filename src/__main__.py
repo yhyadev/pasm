@@ -2,6 +2,7 @@ import platform
 import sys
 import cli
 from compiler.errors import Diagnoster
+import compiler.preprocessor
 import compiler.lexer
 import compiler.parser
 import compiler.ir.gen
@@ -15,13 +16,16 @@ pprinter = PrettyPrinter()
 args = cli.parse_args()
 
 if not args.file_path.is_file() or not args.file_path.exists():
-    print(f"{args.file_path}: is not a file", file=sys.stderr)
+    print(f"{args.file_path} is not a file", file=sys.stderr)
     exit(1)
 
 with open(args.file_path, "r") as f:
     lexer = compiler.lexer.Lexer(list(f.read()), Diagnoster(args.file_path))
 
 tokens = lexer.tokenize()
+tokens = compiler.preprocessor.Preprocessor(
+    tokens, [args.file_path]
+).preprocess_tokens()
 
 if args.emit_outputs:
     print("Tokens :")
