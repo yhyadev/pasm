@@ -123,5 +123,5 @@ class ASMGen:
                 return self.backend.repr_register(0, call.get_type() == Type.Float)
             case _:
                 value.get_diagnoster().error_panic(
-                    ErrorKind.Unspported, "value conversiom from ir to asm"
+                    ErrorKind.Unspported, "value conversion from ir to asm"
                 )

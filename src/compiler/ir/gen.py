@@ -172,5 +172,5 @@ class IRGen:
                         )
             case _:
                 expr.get_diagnoster().error_panic(
-                    ErrorKind.Unspported, "expression conversiom from ast to ir"
+                    ErrorKind.Unspported, "expression conversion from ast to ir"
                 )
