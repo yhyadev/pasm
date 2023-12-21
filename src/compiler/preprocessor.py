@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from .lexer import *
 from .errors import Diagnoster, ErrorKind
@@ -23,22 +23,23 @@ class Preprocessor:
 
         return processed_tokens
 
-    def include_file_search(self, input_file: str) -> Path | None:
-        if os.path.isfile(input_file) and os.path.exists(input_file):
-            return Path(input_file)
-        else:
-            pasmlib_paths = [
-                Path(os.environ.get("PREFIX", "") + "/lib/pasm"),
-                Path("../pasm/lib"),
-                Path("./lib"),
-                Path("../lib"),
-            ]
+    def find_include_file(self, file_path: Path) -> Path | None:
+        if file_path.is_file():
+            return file_path
 
-            for pasmlib_path in pasmlib_paths:
-                pasmlib_path = pasmlib_path.joinpath(input_file)
+        pasmlib_paths = [
+            Path(os.environ.get("PREFIX", "") + "/lib/pasm"),
+            Path(os.environ.get("PATH", "") + "/pasm/lib"),
+            Path("~/pasm/lib").expanduser(),
+            Path("./lib"),
+            Path("../lib"),
+        ]
 
-                if pasmlib_path.exists() and pasmlib_path.is_file():
-                    return pasmlib_path
+        for pasmlib_path in pasmlib_paths:
+            combined_path = pasmlib_path.joinpath(file_path)
+
+            if combined_path.is_file():
+                return combined_path
 
         return None
 
@@ -49,7 +50,9 @@ class Preprocessor:
                 "syntax: expected the file path to be a non-empty string",
             )
 
-        file_path = self.include_file_search(self.tokens[0].value)
+        file_path = self.find_include_file(
+            self.included_files[-1].parent.joinpath(self.tokens[0].value)
+        )
 
         if file_path == None:
             self.tokens[0].diagnoster.error_panic(

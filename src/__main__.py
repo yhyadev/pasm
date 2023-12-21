@@ -15,7 +15,7 @@ pprinter = PrettyPrinter()
 
 args = cli.parse_args()
 
-if not args.file_path.is_file() or not args.file_path.exists():
+if not args.file_path.is_file():
     print(f"{args.file_path} is not a file", file=sys.stderr)
     exit(1)
 
